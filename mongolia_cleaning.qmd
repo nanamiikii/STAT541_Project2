@@ -1,0 +1,44 @@
+---
+title: "WHO Measles Investigation -- Data Cleaning for Mongolia"
+format: html
+embed-resources: true
+theme: flatly
+---
+
+```{r}
+#| label: packages 
+
+library(tidyverse)
+
+```
+
+# About The Data & Motive 
+
+The data comes from the World Health Organization's annual compilation of health and health-related indicators[^1] which as the name implies, is a collection of various socioeconomic indicators such as mortality rate, density of healthcare providers, and more. For the purpose of this study, we will be focusing on the infant mortality rate for those age 5 or younger as children under the age of 5 are one of the more suscpetible groups for complications with measles[^2]. We are interested in looking at Mongolia as from the [table number](link-to-table), we see that overall, they have the highest mean number of measles cases per 1 million, yet in 2024, they appear to have a very high vaccination rate. Knowing that vaccines tend to reduce the transmission and transfection of measles, we wanted to investigate this country further to gather more insight on possible reasons for this inconsistency in expected trend.
+
+<!-- footnotes --> 
+[^1]: https://data.who.int/indicators/i/E3CAF2B/2322814?m49=450
+[^2]: https://www.cdc.gov/measles/signs-symptoms/index.html
+
+```{r}
+#| label: data cleaning
+
+sub_5_mort_rate <- read.csv(here::here("data", "2322814_ALL_LATEST.csv")) |>
+     filter(
+        GEO_NAME_SHORT == "Mongolia", 
+        DIM_TIME >=  2012, 
+        DIM_TIME <= 2024, 
+        DIM_POP_WEALTH_QUINTILE == "TOTAL",
+        DIM_SEX == "TOTAL" # possibly remove later, there is data for SAAB
+    ) |>
+    arrange(desc(DIM_TIME))
+```
+
+```{r}
+#| label: joining mongolia data with meta df, only keeping information on Mongolia
+load(here::here("data", "metadata.RData"))
+
+mongolia_full <- metadata |>
+    right_join(sub_5_mort_rate, by = c("country" = "GEO_NAME_SHORT", "year" = "DIM_TIME"))
+
+```
