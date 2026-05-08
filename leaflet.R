@@ -1,6 +1,8 @@
 library(htmlwidgets)
 library(leaflet)
 
+load(here::here("data", "metadata.RData"))
+
 metadata_2024 <- metadata |>
   filter(year == 2024)
 
