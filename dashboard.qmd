@@ -46,6 +46,8 @@ library(ggalluvial)
 library(ggrepel)
 library(htmlwidgets)
 library(leaflet)
+library(gganimate)
+library(gifski)
 ```
 
 ```{r}
@@ -360,7 +362,7 @@ metadata |>
 
 ```{r}
 #| label: table 1
-#| title: q2 summary table
+#| title: Summary Statistics for GDP Per Capita
 
 gdp_groups <- metadata |>
   filter(year == 2024, !is.na(region), !is.na(GDP_per_capita)) |>
@@ -431,10 +433,11 @@ summarize_stats(metadata |> filter(year == 2024), col = GDP_per_capita) |>
 
 ```{r}
 #| label: table 2
-#| title: q2 avg table
+#| title: Average GDP per Capita and MCV2 Vaccine Rate by Region
 
 metadata |>
-  filter_out(is.na(region)) |>
+  #filter_out(is.na(region)) |>
+  filter(!(is.na(region))) |> 
   group_by(region) |>
   summarize(mean_GDP = mean(GDP_per_capita, na.rm = TRUE),
             mean_mcv2 = mean(mcv2, na.rm = TRUE)) |>
@@ -462,7 +465,7 @@ metadata |>
 
 ```{r}
 #| label: model table
-#| title: q2 model
+#| title: Model using an autocorrelation structure
 
 
 m <- gls(
@@ -524,7 +527,7 @@ summary(m)$tTable |>
 
 **Why Mongolia?**
 
-The data comes from the World Health Organization's annual compilation of health and health-related indicators$^{\text{1}}$ which as the name implies, is a collection of various socioeconomic indicators such as mortality rate, density of healthcare providers, and more. For the purpose of this study, we will be focusing on the infant mortality rate for those age 5 or younger as children under the age of 5 are one of the more susceptible groups for complications with measles$^{\text{2}}$. We are interested in looking at Mongolia as from the table below, we see that overall, they have the highest mean number of measles cases per 1 million, yet in 2024, they appear to have a very high vaccination rate. Knowing that vaccines tend to reduce the transmission and transfection of measles, we wanted to investigate this country further to gather more insight on possible reasons for this inconsistency in expected trend.
+The data comes from the World Health Organization's annual compilation of health and health-related indicators$^{\text{1}}$ which as the name implies, is a collection of various socioeconomic indicators such as mortality rate, density of healthcare providers, and more. For the purpose of this study, we will be focusing on the infant mortality rate for those age 5 or younger as children under the age of 5 are one of the more susceptible groups for complications with measles$^{\text{2}}$. We are interested in looking at Mongolia as from the table below, we see that overall, they have the highest mean number of measles cases per 1 million, yet in 2024, they appear to have a very high vaccination rate. Knowing that vaccines tend to reduce the transmission and transfection of measles, we wanted to investigate this country further to gather more insight on possible reasons for this inconsistency in expected trend and also to see the association between number of measles and infant mortality rate.
 
 :::
 
@@ -587,15 +590,83 @@ metadata |>
 
 ```{r}
 #| title: Percentage of Measles Cases and Under-5 Mortality Over Time in Mongolia
+
+metadata |> 
+  right_join(
+    read_csv(here::here("data", "2322814_ALL_LATEST.csv")) |>
+      filter(
+        GEO_NAME_SHORT == "Mongolia", 
+        DIM_TIME >=  2012, 
+        DIM_TIME <= 2024, 
+        DIM_POP_WEALTH_QUINTILE == "TOTAL",
+        DIM_SEX == "TOTAL" # possibly remove later, there is data for SAAB
+        ) |>
+      arrange(desc(DIM_TIME)),
+    by = c("country" = "GEO_NAME_SHORT", "year" = "DIM_TIME")
+    ) |> 
+  select(region, country, year, measles_total, total_population,
+         #measles_incidence_rate_per_1000000_total_population,
+         mcv2,
+         RATE_PER_1000_N
+         ) |> 
+  filter(country == "Mongolia",
+         year < 2025
+         ) |> 
+  rename(#"measles_r" = "measles_incidence_rate_per_1000000_total_population",
+         "mortality_r" = "RATE_PER_1000_N"
+         ) |> 
+  mutate(measles = measles_total / total_population,
+         mortality = mortality_r / 1000
+         ) |> 
+  pivot_longer(
+    cols = c(measles,
+             #mcv2,
+             mortality),
+    names_to = "type",
+    values_to = "rate"
+  ) |> 
+  ggplot(aes(x = year,
+             y = rate,
+             color = type |> fct_relevel(
+               c(
+               #"mcv2",
+               "mortality",
+               "measles"
+               )
+               ) |> 
+               fct_recode(
+                 #"Mortality (deaths below age 5)" = "mortality",
+                 "Mortality" = "mortality",
+                 "Measles" = "measles")
+             )
+         ) + 
+  geom_point() +
+  geom_line() +
+  transition_reveal(year) + 
+  #transition_time(year) + 
+  labs(
+    x = "Year",
+    y = "",
+    subtitle = "Year: {round(frame_along, 0)}",
+    color = "",
+    #title = "Number of measles cases and number of mortalities as percentages of Mongolia population"
+    title = ""
+    ) + 
+  #scale_y_continuous(limits = c(0, 1)) + 
+  scale_color_manual(values = c("#001E4D", "#FF9807", "#B60BE8")) + 
+  scale_y_continuous(labels = label_percent()) + 
+  theme_minimal()
 ```
 
+Using this plot, even though Mongolia demonstrates a spike for the number of measles cases for 2015 and 2016, there does not seem to be an association between this spike and the infant mortality rate for the country.
 
 <!-- ### Column L {width=25%}
 ```{r}
 #| title: q1 lollipop
 
 metadata |>
-  filter_out(is.na(region)) |>
+  #filter_out(is.na(region)) |>
+  filter(!(is.na(region))) |> 
   group_by(region) |>
   summarize(confirmed_cases = sum(measles_epi_linked + measles_lab_confirmed),
             prop_confirmed = confirmed_cases/sum(measles_total)) |>
@@ -937,7 +1008,8 @@ summarize_stats(metadata |> filter(year == 2024), col = GDP_per_capita) |>
 #| title: q2 avg table
 
 metadata |>
-  filter_out(is.na(region)) |>
+  #filter_out(is.na(region)) |>
+  filter(!(is.na(region))) |> 
   group_by(region) |>
   summarize(mean_GDP = mean(GDP_per_capita, na.rm = TRUE),
             mean_mcv2 = mean(mcv2, na.rm = TRUE)) |>
