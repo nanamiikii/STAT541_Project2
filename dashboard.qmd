@@ -3,7 +3,6 @@ title: "WHO Measles Investigation"
 format: 
   dashboard:
     orientation: rows
-    #scrolling: true
 embed-resources: true
 logo: logo.png
 logo-alt: "World Health Organization logo with globe and medical snake."
@@ -264,7 +263,7 @@ load(here::here("data", "metadata.RData"))
 
 # Measles and Region Socioeconomic Indicators
 
-## Row 0 - research question {height="10%}
+## Row 1 - research question {height="10%"}
 
 :::{.card}
 
@@ -274,16 +273,15 @@ For this project, our aim is to see what socioeconomic factors, such as those re
 
 :::
 
-## Row 1 - leaflet plot
+## Row 2 - plots and tables {height="90%"}
 
-::: {.card title="2024 Measles Vaccination Rates Around the World"}
+### Column 1 - plots {.tabset width="65%"}
 
-An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.
-
+::: {.card title="2024 Measles Vaccination Rates Map"}
 
 ```{r}
 #| label: leaflet plot
-##| title: 2024 Measles Vaccination Rates Around the World
+#| title: 2024 Measles Vaccination Rates Around the World
 #| fig-alt: An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.
 
 metadata_2024 <- metadata |>
@@ -316,30 +314,26 @@ map_data |>
 #        alt = "A world map displaying 2024 measles vaccination rates on a red color scale. Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.")
 ```
 
+An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the country name and MCV2 vaccination rate. Many countries in *North America*, *Europe*, and parts of *Asia* appear lighter, suggesting higher vaccination coverage, while several countries in *central and sub-Saharan Africa* are darker, suggesting lower coverage.
+
 :::
 
-## Row 2 - time series and tables
-
-### Column 1 - time series
-
-::: {.card title="Time Series Plot"}
-
-Visualization displays line charts with median measles incidence and MCV2 vaccination rates per million people from 2012 to 2024, faceted by income classification. Vaccination rate are generally higher as the income classification group rises, which indicates generally that richer countries are more vaccinated. Low income countries have a more direct relationship between these two variables.
+::: {.card title="Measels and Vaccination By Income"}
 
 ```{r}
 #| label: time series plot
-##| title: Time Series Plot
+#| title: Measels and Vaccination By Income
 
 metadata |>
   select(region, country, year, measles_incidence_rate_per_1000000_total_population, total_population, mcv2, GDP_per_capita) |>
   filter(year != 2025 & !is.na(region) & !is.na(GDP_per_capita)) |>
   mutate(gdp_group = factor(
           case_when(
-            GDP_per_capita <= 1145 ~ "low", 
-            GDP_per_capita <= 14005 ~ "middle", 
-            GDP_per_capita > 14005 ~ "high"
+            GDP_per_capita <= 1145 ~ "Low", 
+            GDP_per_capita <= 14005 ~ "Middle", 
+            GDP_per_capita > 14005 ~ "High"
             ), 
-          levels = c("low", "middle", "high")
+          levels = c("Low", "Middle", "High")
           )
         ) |>
   group_by(gdp_group, year) |>
@@ -358,6 +352,7 @@ metadata |>
   labs(
     title = "Comparison of Median <span style='color:#e74c3c;'>Incidence Rate per Million</span> and <span style='color:#3498db;'>MCV2 Vaccination Percentage</span>",
     subtitle = "Countries grouped by income level defined as by World Bank",
+    x = "Year",
     y = "",
     alt = "A figure that displays line charts with median measles incidence and MCV2 vaccination rates per million people from 2012 to 2024, faceted by income classification. Vaccination rate are generally higher as the income classification group rises, which indicates generally that richer countries are more vaccinated. Low income countries have a more direct relationship between these two variables.",
     color = "Type of Rate") +
@@ -371,9 +366,11 @@ metadata |>
 
 ```
 
+Vaccination rate are generally *higher* as the income classification group rises, which indicates generally that richer countries are more vaccinated. Low income countries have a more direct relationship between these two variables.
+
 :::
 
-### Column 2 - tables {.tabset}
+### Column 2 - tables {.tabset width="35%"}
 
 ```{r}
 #| label: table 1
@@ -448,7 +445,7 @@ summarize_stats(metadata |> filter(year == 2024), col = GDP_per_capita) |>
 
 ```{r}
 #| label: table 2
-#| title: Average GDP per Capita and MCV2 Vaccine Rate by Region
+#| title: GDP per Capita and MCV2 Vaccine Rate
 
 metadata |>
   #filter_out(is.na(region)) |>
@@ -470,85 +467,25 @@ metadata |>
   tab_style(style = cell_text(weight = "bold"),
             locations = cells_column_labels()) |>
   tab_header(title = md("Average GDP per Capita and MCV2 Vaccine Rate by Region")) |>
-  tab_caption(caption = md("**Table 4** Side-by-side comparison of mean GDP and MCV2 Percentage")) |>
+  tab_caption(caption = md("Side-by-side comparison of mean GDP and MCV2 Percentage")) |>
   cols_label(region = "Region", mean_GDP = "Mean GDP (USD)", mean_mcv2 = "Mean MCV2 Coverage")
 ```
 
-::: {.card title="Model using an autocorrelation structure"}
+# Mongolia
 
-```{r}
-#| label: model table
-##| title: Model using an autocorrelation structure
-
-
-m <- gls(
-  measles_incidence_rate_per_1000000_total_population ~ region + log_GDP_per_capita + mcv2,
-  data = metadata |> mutate(log_GDP_per_capita = log(GDP_per_capita)),
-  na.action = na.omit,
-  correlation = corAR1(form = ~ year | region / country)
-  )
-
-summary(m)$tTable |> 
-  as_tibble(rownames = "var") |> 
-  mutate(region = c("Quantitative",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Quantitative",
-                    "Quantitative"
-                    )
-         ) |> 
-  mutate(var = var |> 
-           str_remove("region") |> 
-           str_replace("log_GDP_per_capita", "log(GDP per capita ($))") |> 
-           str_replace("mcv2", "MCV2")
-         
-         ) |> 
-  group_by(region) |> 
-  gt() |> 
-  fmt_number(columns = c("Value", "Std.Error", "t-value"), 
-              decimals = 3
-             ) |> 
-  fmt_number(columns = c("p-value"), 
-              decimals = 3
-             ) |> 
-  cols_align(align = "left", columns = region) |>
-  cols_label("var" = "Variable",
-             "Value" = "Estimated coefficient"
-             ) |> 
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-    ) |> 
-  tab_style(
-    style = cell_text(style = "italic", decorate = "underline"),
-    locations = cells_row_groups()
-    ) |> 
-  tab_header(
-    title = md("Estimated coefficients for modeled variables "
-               )
-    )
-```
-
-:::
-
-# Mongolia {scrolling="false"}
-
-## Row 1 - why mongolia {height="32%"}
+## Row 1 - why mongolia {height="23%"}
 
 :::{.card}
 
 **Why Mongolia?**
 
-The data comes from the World Health Organization's annual compilation of health and health-related indicators$^{\text{1}}$ which as the name implies, is a collection of various socioeconomic indicators such as mortality rate, density of healthcare providers, and more. For the purpose of this study, we will be focusing on the infant mortality rate for those age 5 or younger as children under the age of 5 are one of the more susceptible groups for complications with measles$^{\text{2}}$. We are interested in looking at Mongolia as from the table below, we see that overall, they have the highest mean number of measles cases per 1 million, yet in 2024, they appear to have a very high vaccination rate. Knowing that vaccines tend to reduce the transmission and transfection of measles, we wanted to investigate this country further to gather more insight on possible reasons for this inconsistency in expected trend and also to see the association between number of measles and infant mortality rate.
+We are interested in looking at Mongolia as from the table below, we see that overall, they have the highest mean number of measles cases per 1 million people, yet based on the map on the main page, they appear to have a very high vaccination rate in 2024 (95%). Knowing that vaccines tend to reduce the transmission and transfection of measles, we wanted to investigate this country further to gather more insight on possible reasons for this inconsistency in expected trend and also to see the association between number of measles and infant mortality rate.
 
 :::
 
-## Row 2 - table and animation {height="68%"}
+## Row 2 - table and animation {height="77%"}
 
-### Column 1 - table
+### Column 1 - table {width="45%"}
 
 ```{r}
 #| title: Measles Cases Across the Regions of the World
@@ -601,7 +538,7 @@ metadata |>
     )
 ```
 
-### Column 2 - animated plot
+### Column 2 - animated plot {.tabset width="55%"}
 
 ```{r}
 #| title: Percentage of Measles Cases and Under-5 Mortality Over Time in Mongolia
@@ -673,497 +610,8 @@ metadata |>
   theme_minimal()
 ```
 
+::: {.card title="Takeaways"}
+
 Using this plot, even though Mongolia demonstrates a spike for the number of measles cases for 2015 and 2016, there does not seem to be an association between this spike and the infant mortality rate for the country.
 
-<!-- ### Column L {width=25%}
-```{r}
-#| title: q1 lollipop
-
-metadata |>
-  #filter_out(is.na(region)) |>
-  filter(!(is.na(region))) |> 
-  group_by(region) |>
-  summarize(confirmed_cases = sum(measles_epi_linked + measles_lab_confirmed),
-            prop_confirmed = confirmed_cases/sum(measles_total)) |>
-  mutate(region = fct_reorder(region, prop_confirmed)) |>
-  ggplot(aes(x = prop_confirmed, y = region)) +
-  geom_segment(aes(x = 0, xend = prop_confirmed)) +
-  geom_point(color = "#f39c12", size = 3) +
-  scale_x_continuous(labels = label_percent()) +
-  labs(title = "Proportion of Identified Measles Cases by Region",
-       x = "Percent of Total Measles Cases that are Identified (%)",
-       y = "",
-       alt = "A lollipop plot displaying the percent of total meales cases that are identified by region. Americas has the highest percentage with nearly all total measles cases confirmed. Eastern Mediterranean and South East Asia have the lowest percentages at just below 50%.") +
-  theme_bw()
-
-```
-
-### Column M {width=25%}
-```{r}
-#| title: q1 alluvial
-
-metadata |>
-  filter(year == 2024, !is.na(region)) |>
-  group_by(region) |>
-  summarize(
-    region_measles_total = sum(measles_total), 
-    region_lab_confirmed = sum(measles_lab_confirmed),
-    region_epi_linked = sum(measles_epi_linked), 
-    region_clinical = sum(measles_clinical)
-  ) |>
-  pivot_longer(
-    cols = c(region_lab_confirmed, region_epi_linked, region_clinical), 
-    names_to = "type", 
-    values_to = "count"
-  ) |>
-  mutate(
-    type = recode(type, 
-      region_lab_confirmed = "Lab Confirmed", 
-      region_epi_linked = "Epi-Linked", 
-      region_clinical = "Clinical"
-    )
-  ) |>
-  ggplot(aes(axis1 = region, axis2 = type, y = count)) + 
-  geom_alluvium(aes(fill = region)) + 
-  geom_stratum(alpha = .2) +
-  scale_fill_manual(
-    values = c("#e74c3c", "#CC79A7", "#f39c12", 
-               "#29c1a3", "#3498db", "#2c3e50")
-  ) +
-  geom_text_repel(
-    aes(label = ifelse(
-      after_stat(x) == 1, 
-      paste0(as.character(after_stat(stratum)), "\n(", as.character(comma(after_stat(count))), ")"),
-      NA)
-    ),
-    stat = "stratum",
-    direction = "y",
-    nudge_x = -.7
-  ) +
-  geom_text_repel(
-    aes(label = ifelse(
-      after_stat(x) == 2,
-       paste0(as.character(after_stat(stratum)), "\n(", as.character(comma(after_stat(count))), ")"),
-        NA)
-    ),
-    stat = "stratum",
-    direction = "y",
-    nudge_x = .35
-  ) +
-  scale_x_discrete(limits = c("Region", "Case Type")) + 
-  scale_y_continuous(
-    breaks = seq(0, 360000, by = 60000),
-    labels = label_comma()
-  ) +
-  labs(
-    title = "Measles Cases by Region and Confirmation Type", 
-    subtitle = "By counts, Colored by Region",
-    y = "", 
-    alt = "An alluvial figure that displays the flow of total measles cases from world regions to the confirmation type going left to right. Flows split into three case types; lab confirmed, epidemiologically linked, and clinical symptomatic. Europe and Easter Mediterranean contribute the largest shares overall going to lab confirmed and clinical symptoms. Americas contribute very few cases."
-  ) + 
-  theme_minimal() + 
-  theme(
-    legend.position = "none"
-  )
-
-```
-
-### Column R {.tabset}
-
-```{r}
-#| title: 2024 Measles Vaccination Rates Around the World
-#| fig-alt: An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.
-
-metadata_2024 <- metadata |>
-  filter(year == 2024)
-
-map_data <- ne_countries(scale = "medium", returnclass = "sf") |>
-  left_join(metadata_2024, join_by(iso_a3_eh == iso3))
-
-pal <- colorNumeric(palette = c("#e74c3c", "#ecf0f1"),
-                    domain = c(0, 1),
-                    na.color = "darkgray")
-
-map_data |>
-  leaflet() |>
-  #addTiles() |>
-  onRender("function(el, x) {el.style.backgroundColor = '#3498db';}") |>
-  setView(lng = 0, lat = 25, zoom = 1) |>
-  addPolygons(fillColor = ~pal(mcv2),
-              fillOpacity = 1,
-              color = "white",
-              weight = 1,
-              opacity = 1,
-              label = ~paste0(name, ": ",
-                              ifelse(is.na(mcv2), "No Data", percent(mcv2))))
-
-# labs(title = "2024 Measles Vaccination Rates Around the World",
-#        x = "",
-#        y = "",
-#        fill = "Measles Vaccination Rate",
-#        alt = "A world map displaying 2024 measles vaccination rates on a red color scale. Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.")
-```
-
-```{r}
-#| title: q2 time series
-
-metadata |>
-  select(region, country, year, measles_incidence_rate_per_1000000_total_population, total_population, mcv2, GDP_per_capita) |>
-  filter(year != 2025 & !is.na(region) & !is.na(GDP_per_capita)) |>
-  mutate(gdp_group = factor(
-          case_when(
-            GDP_per_capita <= 1145 ~ "low", 
-            GDP_per_capita <= 14005 ~ "middle", 
-            GDP_per_capita > 14005 ~ "high"
-            ), 
-          levels = c("low", "middle", "high")
-          )
-        ) |>
-  group_by(gdp_group, year) |>
-  summarize(Vaccination = median(mcv2 * 100, na.rm = TRUE), 
-            Incidence = median(measles_incidence_rate_per_1000000_total_population, na.rm = TRUE), 
-            .groups = "drop") |>
-  pivot_longer(
-    cols = c(Incidence, Vaccination), 
-    names_to = "type", 
-    values_to = "rate"
-  ) |>
-  ggplot(aes(x = year, y = rate, color = type)) + 
-  geom_line() + 
-  scale_color_manual(values = c("Incidence" = "#e74c3c", "Vaccination" = "#3498db")) + 
-  facet_wrap(~ gdp_group, axes = "all") + 
-  labs(
-    title = "Comparison of Median <span style='color:#e74c3c;'>Incidence Rate per Million</span> and <span style='color:#3498db;'>MCV2 Vaccination Percentage</span>",
-    subtitle = "Countries grouped by income level defined as by World Bank",
-    y = "",
-    alt = "A figure that displays line charts with median measles incidence and MCV2 vaccination rates per million people from 2012 to 2024, faceted by income classification. Vaccination rate are generally higher as the income classification group rises, which indicates generally that richer countries are more vaccinated. Low income countries have a more direct relationship between these two variables.",
-    color = "Type of Rate") +
-  scale_x_continuous(breaks = seq(2012, 2024, by = 4), 
-                    ) + 
-  theme_minimal() + 
-  theme(
-    plot.title = element_markdown(size = 12), 
-    legend.position = "none"
-    )
-
-
-```
-
-## Row 2 {height=50%}
-
-### Column {.tabset}
-
-```{r}
-#| title: q1 summary table
-
-summarize_stats(metadata |> filter(!(is.na(region))),
-                measles_incidence_rate_per_1000000_total_population,
-                region
-                ) |> 
-  ungroup() |> 
-  arrange(-mean) |> 
-  gt() |> 
-  fmt_number(columns = -c(region, n), 
-             decimals = 2) |> 
-  cols_label("region" = "Region",
-             "mean" = "Mean",
-             "median" = "Median",
-             "stdev" = "Standard Deviation",
-             "iqr" = "IQR",
-             "n" = "Sample Size",
-             ) |> 
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-    ) |> 
-  tab_style(
-    style = cell_text(style = "italic", decorate = "underline"),
-    locations = cells_row_groups()
-    ) |> 
-  tab_header(
-    title = md("Summary Statistics for Total Number of Measles Cases for Each
-               1 Million Individuals")
-  ) |> 
-  data_color(
-    columns = "mean",
-    method = "numeric",
-    palette = c("#CCEEDF", "#BAE8D4", "#A8E2CA",
-                "#96DCBF", "#83D6B5", "#6ED0AB",
-                "#57CAA1", "#3BC397", "#00BD8D"
-                )
-    )
-
-```
-
-
-```{r}
-#| title: q1 top 5 avg table
-
-metadata |> 
-  filter(!(is.na(region)),
-         !(is.na(country))
-         ) |> 
-  
-  # used to assign each country to the appropriate region when merging
-  select(region, country) |> 
-  unique() |>
-  arrange(country) |> 
-  
-  full_join(summarize_stats(metadata |> filter(!(is.na(region)), !(is.na(country))),
-                            measles_incidence_rate_per_1000000_total_population,
-                            country)) |> 
-  group_by(region) |> 
-  slice_max(mean, n = 5) |> 
-  arrange(-mean) |> 
-  gt() |> 
-  fmt_number(columns = -c(country, region, n), 
-             decimals = 2) |> 
-  cols_label("country" = "Country",
-             "mean" = "Mean",
-             "median" = "Median",
-             "stdev" = "Standard Deviation",
-             "iqr" = "IQR",
-             "n" = "Sample Size",
-             ) |> 
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-    ) |> 
-  tab_style(
-    style = cell_text(style = "italic", decorate = "underline"),
-    locations = cells_row_groups()
-    ) |> 
-  tab_header(
-    title = md("Summary Statistics for Total Number of Measles Cases for Each
-               1 Million Individuals")
-  ) |> 
-  data_color(
-    columns = "mean",
-    method = "numeric",
-    palette = c("#CCEEDF", "#BAE8D4", "#A8E2CA",
-                "#96DCBF", "#83D6B5", "#6ED0AB",
-                "#57CAA1", "#3BC397", "#00BD8D"
-                )
-    )
-```
-
-### Column R {.tabset}
-
-```{r}
-#| title: q2 summary table
-
-gdp_groups <- metadata |>
-  filter(year == 2024, !is.na(region), !is.na(GDP_per_capita)) |>
-  group_by(region) |>
-  summarize(mean_gdp = mean(GDP_per_capita, na.rm = TRUE), .groups = "drop") |>
-  mutate(
-    gdp_group = factor(
-      case_when(
-        mean_gdp <= 1145 ~ "low",
-        mean_gdp <= 14005 ~ "middle",
-        TRUE ~ "high"
-      ),
-      levels = c("low", "middle", "high")
-    )
-  )
-
-summarize_stats(metadata |> filter(year == 2024), col = GDP_per_capita) |>
-  filter(!is.na(region)) |>
-  left_join(gdp_groups, by = "region") |>
-  arrange(desc(mean)) |> 
-  ungroup() |>
-  gt() |> 
-  fmt_currency(columns = -c(region, n), decimals = 2) |> 
-  cols_align(align = "left", columns = region) |>
-  cols_label("region" = "Region",
-              "mean" = "Mean",
-              "median" = "Median",
-              "stdev" = "Standard Deviation",
-              "iqr" = "IQR",
-              "n" = "Sample Size",
-              ) |> 
-  tab_style(
-    style = cell_fill(color = "#e74c3c50"),
-    locations = cells_body(rows = gdp_group == "low")
-  ) |>
-  tab_style(
-    style = cell_fill(color = "#f39c1250"),
-    locations = cells_body(rows = gdp_group == "middle")
-  ) |>
-  tab_style(
-    style = cell_fill(color = "#3498db50"),
-    locations = cells_body(rows = gdp_group == "high")
-  ) |>
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-  ) |> 
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-    ) |> 
-  tab_style(
-    style = cell_text(style = "italic", decorate = "underline"),
-    locations = cells_row_groups()
-    ) |>
-  cols_hide(columns = c(gdp_group, mean_gdp)) |>
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-    ) |>
-  tab_header(
-    title = md("Summary Statistics for GDP Per Capita (USD) by Region in 2024"), 
-    subtitle = md("GDP classification based on mean of region: 
-      <span style='color:#e74c3c;'>Low</span> | <span style='color:#f39c12;'>Middle</span> | <span style='color:#3498db;'>High</span>")
-  )
-
-```
-
-```{r}
-#| title: q2 avg table
-
-metadata |>
-  #filter_out(is.na(region)) |>
-  filter(!(is.na(region))) |> 
-  group_by(region) |>
-  summarize(mean_GDP = mean(GDP_per_capita, na.rm = TRUE),
-            mean_mcv2 = mean(mcv2, na.rm = TRUE)) |>
-  arrange(mean_GDP) |>
-  gt() |>
-  data_color(columns = mean_GDP, method = "numeric",
-             fn = col_numeric(palette = c("#ecf0f1", "#3498db"),
-                              domain = NULL)) |>
-  data_color(columns = mean_mcv2, method = "numeric",
-             fn = col_numeric(palette = c("#ecf0f1", "#29c1a3"),
-                              domain = NULL)) |>
-  fmt_currency(columns = mean_GDP, currency = "USD") |>
-  fmt_percent(columns = mean_mcv2, decimals = 1) |>
-  cols_align(align = "left", columns = region) |>
-  tab_style(style = cell_text(weight = "bold"),
-            locations = cells_column_labels()) |>
-  tab_header(title = md("Average GDP per Capita and MCV2 Vaccine Rate by Region")) |>
-  tab_caption(caption = md("**Table 4** Side-by-side comparison of mean GDP and MCV2 Percentage")) |>
-  cols_label(region = "Region", mean_GDP = "Mean GDP (USD)", mean_mcv2 = "Mean MCV2 Coverage")
-```
-
-```{r}
-#| title: q2 model
-
-
-m <- gls(
-  measles_incidence_rate_per_1000000_total_population ~ region + log_GDP_per_capita + mcv2,
-  data = metadata |> mutate(log_GDP_per_capita = log(GDP_per_capita)),
-  na.action = na.omit,
-  correlation = corAR1(form = ~ year | region / country)
-  )
-
-summary(m)$tTable |> 
-  as_tibble(rownames = "var") |> 
-  mutate(region = c("Quantitative",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Quantitative",
-                    "Quantitative"
-                    )
-         ) |> 
-  mutate(var = var |> 
-           str_remove("region") |> 
-           str_replace("log_GDP_per_capita", "log(GDP per capita ($))") |> 
-           str_replace("mcv2", "MCV2")
-         
-         ) |> 
-  group_by(region) |> 
-  gt() |> 
-  fmt_number(columns = c("Value", "Std.Error", "t-value"), 
-              decimals = 3
-             ) |> 
-  fmt_number(columns = c("p-value"), 
-              decimals = 3
-             ) |> 
-  cols_align(align = "left", columns = region) |>
-  cols_label("var" = "Variable",
-             "Value" = "Estimated coefficient"
-             ) |> 
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-    ) |> 
-  tab_style(
-    style = cell_text(style = "italic", decorate = "underline"),
-    locations = cells_row_groups()
-    ) |> 
-  tab_header(
-    title = md("Estimated coefficients for modeled variables "
-               )
-    )
-```
-
-
-## Row 3 - model table
-
-### Column - just one
-
-::: {.card title="Model using an autocorrelation structure"}
-
-```{r}
-##| label: model table
-##| title: Model using an autocorrelation structure
-
-
-m <- gls(
-  measles_incidence_rate_per_1000000_total_population ~ region + log_GDP_per_capita + mcv2,
-  data = metadata |> mutate(log_GDP_per_capita = log(GDP_per_capita)),
-  na.action = na.omit,
-  correlation = corAR1(form = ~ year | region / country)
-  )
-
-summary(m)$tTable |> 
-  as_tibble(rownames = "var") |> 
-  mutate(region = c("Quantitative",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Region (Africa as baseline) (overall p-value = 0.057)",
-                    "Quantitative",
-                    "Quantitative"
-                    )
-         ) |> 
-  mutate(var = var |> 
-           str_remove("region") |> 
-           str_replace("log_GDP_per_capita", "log(GDP per capita ($))") |> 
-           str_replace("mcv2", "MCV2")
-         
-         ) |> 
-  group_by(region) |> 
-  gt() |> 
-  fmt_number(columns = c("Value", "Std.Error", "t-value"), 
-              decimals = 3
-             ) |> 
-  fmt_number(columns = c("p-value"), 
-              decimals = 3
-             ) |> 
-  cols_align(align = "left", columns = region) |>
-  cols_label("var" = "Variable",
-             "Value" = "Estimated coefficient"
-             ) |> 
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-    ) |> 
-  tab_style(
-    style = cell_text(style = "italic", decorate = "underline"),
-    locations = cells_row_groups()
-    ) |> 
-  tab_header(
-    title = md("Estimated coefficients for modeled variables "
-               )
-    )
-```
-
 :::
-
--->
