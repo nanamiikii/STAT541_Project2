@@ -3,7 +3,7 @@ title: "WHO Measles Investigation"
 format: 
   dashboard:
     orientation: rows
-    scrolling: true
+    #scrolling: true
 embed-resources: true
 logo: logo.png
 logo-alt: "World Health Organization logo with globe and medical snake."
@@ -270,13 +270,20 @@ load(here::here("data", "metadata.RData"))
 
 **Research Question**: Are there associations between measles and region socioeconomic indicators?
 
+For this project, our aim is to see what socioeconomic factors, such as those relating to income, seem to contribute to the number of measles for the different world regions as defined by the World Health Organization (WHO).
+
 :::
 
 ## Row 1 - leaflet plot
 
+::: {.card title="2024 Measles Vaccination Rates Around the World"}
+
+An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.
+
+
 ```{r}
 #| label: leaflet plot
-#| title: 2024 Measles Vaccination Rates Around the World
+##| title: 2024 Measles Vaccination Rates Around the World
 #| fig-alt: An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.
 
 metadata_2024 <- metadata |>
@@ -309,13 +316,19 @@ map_data |>
 #        alt = "A world map displaying 2024 measles vaccination rates on a red color scale. Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.")
 ```
 
+:::
+
 ## Row 2 - time series and tables
 
 ### Column 1 - time series
 
+::: {.card title="Time Series Plot"}
+
+Visualization displays line charts with median measles incidence and MCV2 vaccination rates per million people from 2012 to 2024, faceted by income classification. Vaccination rate are generally higher as the income classification group rises, which indicates generally that richer countries are more vaccinated. Low income countries have a more direct relationship between these two variables.
+
 ```{r}
 #| label: time series plot
-#| title: Time Series Plot
+##| title: Time Series Plot
 
 metadata |>
   select(region, country, year, measles_incidence_rate_per_1000000_total_population, total_population, mcv2, GDP_per_capita) |>
@@ -358,11 +371,13 @@ metadata |>
 
 ```
 
+:::
+
 ### Column 2 - tables {.tabset}
 
 ```{r}
 #| label: table 1
-#| title: Summary Statistics for GDP Per Capita
+#| title: GDP Per Capita Summary Statistics
 
 gdp_groups <- metadata |>
   filter(year == 2024, !is.na(region), !is.na(GDP_per_capita)) |>
@@ -459,13 +474,11 @@ metadata |>
   cols_label(region = "Region", mean_GDP = "Mean GDP (USD)", mean_mcv2 = "Mean MCV2 Coverage")
 ```
 
-## Row 3 - model table
-
-### Column - just one
+::: {.card title="Model using an autocorrelation structure"}
 
 ```{r}
 #| label: model table
-#| title: Model using an autocorrelation structure
+##| title: Model using an autocorrelation structure
 
 
 m <- gls(
@@ -518,6 +531,8 @@ summary(m)$tTable |>
                )
     )
 ```
+
+:::
 
 # Mongolia {scrolling="false"}
 
@@ -1085,4 +1100,70 @@ summary(m)$tTable |>
                )
     )
 ```
+
+
+## Row 3 - model table
+
+### Column - just one
+
+::: {.card title="Model using an autocorrelation structure"}
+
+```{r}
+##| label: model table
+##| title: Model using an autocorrelation structure
+
+
+m <- gls(
+  measles_incidence_rate_per_1000000_total_population ~ region + log_GDP_per_capita + mcv2,
+  data = metadata |> mutate(log_GDP_per_capita = log(GDP_per_capita)),
+  na.action = na.omit,
+  correlation = corAR1(form = ~ year | region / country)
+  )
+
+summary(m)$tTable |> 
+  as_tibble(rownames = "var") |> 
+  mutate(region = c("Quantitative",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Quantitative",
+                    "Quantitative"
+                    )
+         ) |> 
+  mutate(var = var |> 
+           str_remove("region") |> 
+           str_replace("log_GDP_per_capita", "log(GDP per capita ($))") |> 
+           str_replace("mcv2", "MCV2")
+         
+         ) |> 
+  group_by(region) |> 
+  gt() |> 
+  fmt_number(columns = c("Value", "Std.Error", "t-value"), 
+              decimals = 3
+             ) |> 
+  fmt_number(columns = c("p-value"), 
+              decimals = 3
+             ) |> 
+  cols_align(align = "left", columns = region) |>
+  cols_label("var" = "Variable",
+             "Value" = "Estimated coefficient"
+             ) |> 
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+    ) |> 
+  tab_style(
+    style = cell_text(style = "italic", decorate = "underline"),
+    locations = cells_row_groups()
+    ) |> 
+  tab_header(
+    title = md("Estimated coefficients for modeled variables "
+               )
+    )
+```
+
+:::
+
 -->
