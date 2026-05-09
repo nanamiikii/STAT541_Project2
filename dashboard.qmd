@@ -260,6 +260,7 @@ metadata <- dataset |>
 load(here::here("data", "metadata.RData"))
 ```
 
+# Measles and Region Socioeconomic Indicators
 
 ## Row 0 - research question {height="10%}
 
@@ -514,6 +515,80 @@ summary(m)$tTable |>
                )
     )
 ```
+
+# Mongolia {scrolling="false"}
+
+## Row 1 - why mongolia {height="32%"}
+
+:::{.card}
+
+**Why Mongolia?**
+
+The data comes from the World Health Organization's annual compilation of health and health-related indicators$^{\text{1}}$ which as the name implies, is a collection of various socioeconomic indicators such as mortality rate, density of healthcare providers, and more. For the purpose of this study, we will be focusing on the infant mortality rate for those age 5 or younger as children under the age of 5 are one of the more susceptible groups for complications with measles$^{\text{2}}$. We are interested in looking at Mongolia as from the table below, we see that overall, they have the highest mean number of measles cases per 1 million, yet in 2024, they appear to have a very high vaccination rate. Knowing that vaccines tend to reduce the transmission and transfection of measles, we wanted to investigate this country further to gather more insight on possible reasons for this inconsistency in expected trend.
+
+:::
+
+## Row 2 - table and animation {height="68%"}
+
+### Column 1 - table
+
+```{r}
+#| title: Measles Cases Across the Regions of the World
+
+metadata |> 
+  filter(!(is.na(region)),
+         !(is.na(country))
+         ) |> 
+  
+  # used to assign each country to the appropriate region when merging
+  select(region, country) |> 
+  unique() |>
+  arrange(country) |> 
+  
+  full_join(summarize_stats(metadata |> filter(!(is.na(region)), !(is.na(country))),
+                            measles_incidence_rate_per_1000000_total_population,
+                            country)) |> 
+  group_by(region) |> 
+  slice_max(mean, n = 5) |> 
+  arrange(-mean) |> 
+  gt() |> 
+  fmt_number(columns = -c(country, region, n), 
+             decimals = 2) |> 
+  cols_label("country" = "Country",
+             "mean" = "Mean",
+             "median" = "Median",
+             "stdev" = "Standard Deviation",
+             "iqr" = "IQR",
+             "n" = "Sample Size",
+             ) |> 
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+    ) |> 
+  tab_style(
+    style = cell_text(style = "italic", decorate = "underline"),
+    locations = cells_row_groups()
+    ) |> 
+  tab_header(
+    title = md("Summary Statistics for Total Number of Measles Cases for Each
+               1 Million Individuals")
+  ) |> 
+  data_color(
+    columns = "mean",
+    method = "numeric",
+    palette = c("#CCEEDF", "#BAE8D4", "#A8E2CA",
+                "#96DCBF", "#83D6B5", "#6ED0AB",
+                "#57CAA1", "#3BC397", "#00BD8D"
+                )
+    )
+```
+
+### Column 2 - animated plot
+
+```{r}
+#| title: Percentage of Measles Cases and Under-5 Mortality Over Time in Mongolia
+```
+
 
 <!-- ### Column L {width=25%}
 ```{r}
