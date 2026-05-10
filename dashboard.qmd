@@ -612,6 +612,6 @@ metadata |>
 
 ::: {.card title="Takeaways"}
 
-Using this plot, even though Mongolia demonstrates a spike for the number of measles cases for 2015 and 2016, there does not seem to be an association between this spike and the infant mortality rate for the country.
+According to the plot, Mongolia’s mortality for infants and children under 5 years old appears to be decreasing over time, while the country does not demonstrate a change in the percentage of measles cases with the exception of a spike in 2025 and 2026. Therefore, there does not seem to be an association between this spike and the infant mortality rate for the country.
 
 :::
