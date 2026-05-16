@@ -373,11 +373,11 @@ metadata |>
     values_to = "rate"
   ) |>
   ggplot(aes(x = year, y = rate, color = type)) + 
-  geom_line() + 
-  scale_color_manual(values = c("Incidence" = "#e74c3c", "Vaccination" = "#3498db")) + 
+  geom_line(linewidth = 2) + 
+  scale_color_manual(values = c("Incidence" = "#f4a324", "Vaccination" = "#e74c3c")) + 
   facet_wrap(~ gdp_group, axes = "all") + 
   labs(
-    title = "Comparison of Median <span style='color:#e74c3c;'>Incidence Rate per Million</span> and <span style='color:#3498db;'>MCV2 Vaccination Percentage</span>",
+    title = "Comparison of Median <span style='color:#f4a324;'>Incidence Rate per Million</span> and <span style='color:#e74c3c;'>MCV2 Vaccination Percentage</span>",
     subtitle = "Countries grouped by income level defined as by World Bank",
     x = "Year",
     y = "",
@@ -387,8 +387,15 @@ metadata |>
                     ) + 
   theme_minimal() + 
   theme(
-    plot.title = element_markdown(size = 12), 
-    legend.position = "none"
+    plot.title = element_markdown(size = 14), 
+    legend.position = "none",
+    axis.title.x = element_text(size = 15),
+    #axis.title.y = element_text(size = 17),
+    axis.text = element_text(size = 15),
+    legend.text = element_text(size = 15),
+    plot.subtitle = element_text(size = 15),
+    #plot.title = element_text(size = 15),
+    strip.text = element_text(size = 15)
     )
 
 ```
@@ -486,7 +493,7 @@ metadata |>
              fn = col_numeric(palette = c("#ecf0f1", "#3498db"),
                               domain = NULL)) |>
   data_color(columns = mean_mcv2, method = "numeric",
-             fn = col_numeric(palette = c("#ecf0f1", "#29c1a3"),
+             fn = col_numeric(palette = c("#ecf0f1", "#e74c3c"),
                               domain = NULL)) |>
   fmt_currency(columns = mean_GDP, currency = "USD") |>
   fmt_percent(columns = mean_mcv2, decimals = 1) |>
@@ -561,10 +568,15 @@ metadata |>
   data_color(
     columns = "mean",
     method = "numeric",
-    palette = c("#CCEEDF", "#BAE8D4", "#A8E2CA",
-                "#96DCBF", "#83D6B5", "#6ED0AB",
-                "#57CAA1", "#3BC397", "#00BD8D"
-                )
+    #palette = c("#CCEEDF", "#BAE8D4", "#A8E2CA",
+     #           "#96DCBF", "#83D6B5", "#6ED0AB",
+      #          "#57CAA1", "#3BC397", "#00BD8D"
+       #         ),
+    palette = c(
+      "#FFE5C6", "#FFDDB3", "#FFD5A0",
+      "#FFCC8D", "#FEC47A", "#FCBC67",
+      "#FAB353", "#F7AB3E", "#F4A324"
+      )
     )
 ```
 
@@ -618,24 +630,39 @@ metadata |>
                ) |> 
                fct_recode(
                  #"Mortality (deaths below age 5)" = "mortality",
-                 "Under-5 Mortality Rate" = "mortality",
-                 "Measles Rate" = "measles")
+                 "Mortality" = "mortality",
+                 "Measles" = "measles")
              )
          ) + 
-  geom_point() +
-  geom_line() +
+  geom_point(size = 3) +
+  geom_line(linewidth = 2) +
   transition_reveal(year) + 
   #transition_time(year) + 
   labs(
     x = "Year",
     y = "",
-    subtitle = "Year: {round(frame_along, 0)}",
+    subtitle = "Year being shown: {round(frame_along, 0)}",
     color = "",
     #title = "Number of measles cases and number of mortalities as percentages of Mongolia population"
-    title = ""
+    #title = ""
+    title = "Mongolia population percentages of measles cases and mortalities"
     ) + 
   #scale_y_continuous(limits = c(0, 1)) + 
-  scale_color_manual(values = c("#001E4D", "#FF9807", "#B60BE8")) + 
-  scale_y_continuous(labels = label_percent()) + 
-  theme_minimal()
+  scale_color_manual(values = c("#001E4D",
+                                "#f4a324"
+                                #"#FF9807", "#B60BE8"
+                                )
+                     ) + 
+  
+  #"#e74c3c"
+  scale_y_continuous(labels = label_percent()) +  
+  scale_x_continuous(breaks = seq(2013, 2023, by = 2)) +  
+  theme_minimal() + 
+  theme(axis.title.x = element_text(size = 15),
+        #axis.title.y = element_text(size = 17),
+        axis.text = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.subtitle = element_text(size = 15),
+        plot.title = element_text(size = 15)
+        )
 ```
