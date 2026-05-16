@@ -15,7 +15,6 @@ pal <- colorNumeric(palette = c("#e74c3c", "#ecf0f1"),
 
 map_data |>
   leaflet() |>
-  #addTiles() |>
   onRender("function(el, x) {el.style.backgroundColor = '#3498db';}") |>
   setView(lng = 0, lat = 25, zoom = 1) |>
   addPolygons(fillColor = ~pal(mcv2),
@@ -25,11 +24,3 @@ map_data |>
               opacity = 1,
               label = ~paste0(name, ": ",
                               ifelse(is.na(mcv2), "No Data", percent(mcv2))))
-
-
-# "#29c1a3"
-# "#ecf0f1"
-# "#3498db"
-# "#f39c12"
-# "#e74c3c"
-# "#859394"

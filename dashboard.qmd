@@ -3,6 +3,7 @@ title: "WHO Measles Investigation"
 format: 
   dashboard:
     orientation: rows
+server: shiny
 embed-resources: true
 logo: logo.png
 logo-alt: "World Health Organization logo with globe and medical snake."
@@ -47,6 +48,7 @@ library(htmlwidgets)
 library(leaflet)
 library(gganimate)
 library(gifski)
+library(shiny)
 ```
 
 ```{r}
@@ -94,11 +96,11 @@ summarize_stats <- function(df, col = measles_lab_confirmed, mode = region) {
   ######### PARAMETERS ##########
   # input: df -- the dataframe of interest 
   # col: column of interest to summarize by: 
-  #   measels_suspect, 
-  #   measels_clinical, 
-  #   measels_epi_linked, 
-  #   measels_lab_confirmed [DEFAULT], 
-  #   measels_total
+  #   measles_suspect, 
+  #   measles_clinical, 
+  #   measles_epi_linked, 
+  #   measles_lab_confirmed [DEFAULT], 
+  #   measles_total
   # mode: aggregate by options: 
   #   region [DEFAULT], 
   #   country, 
@@ -277,7 +279,7 @@ For this project, our aim is to see what socioeconomic factors, such as those re
 
 ### Column 1 - plots {.tabset width="65%"}
 
-::: {.card title="2024 Measles Vaccination Rates Map"}
+::: {.card title="2024 MCV2 Rates"}
 
 ```{r}
 #| label: leaflet plot
@@ -294,35 +296,58 @@ pal <- colorNumeric(palette = c("#e74c3c", "#ecf0f1"),
                     domain = c(0, 1),
                     na.color = "darkgray")
 
-map_data |>
-  leaflet() |>
-  #addTiles() |>
-  onRender("function(el, x) {el.style.backgroundColor = '#3498db';}") |>
-  setView(lng = 0, lat = 25, zoom = 1) |>
-  addPolygons(fillColor = ~pal(mcv2),
-              fillOpacity = 1,
-              color = "white",
-              weight = 1,
-              opacity = 1,
-              label = ~paste0(name, ": ",
-                              ifelse(is.na(mcv2), "No Data", percent(mcv2))))
+selectInput("region_select",
+            "Select a region:",
+            choices = c("World",
+                        sort(unique(as.character(metadata_2024$region)))),
+            selected = "World")
 
-# labs(title = "2024 Measles Vaccination Rates Around the World",
-#        x = "",
-#        y = "",
-#        fill = "Measles Vaccination Rate",
-#        alt = "A world map displaying 2024 measles vaccination rates on a red color scale. Many countries in North America, Europe, and parts of Asia appear lighter, suggesting higher vaccination coverage, while several countries in central and sub-Saharan Africa are darker, suggesting lower coverage. Some countries are gray, representing unknown vaccination rates.")
+leafletOutput("map")
 ```
 
 An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the country name and MCV2 vaccination rate. Many countries in *North America*, *Europe*, and parts of *Asia* appear lighter, suggesting higher vaccination coverage, while several countries in *central and sub-Saharan Africa* are darker, suggesting lower coverage.
 
 :::
 
-::: {.card title="Measels and Vaccination By Income"}
+```{r}
+#| context: server
+
+llz <- reactive({ # list of long, lat, zoom for setView()
+  switch(input$region_select,
+    "World" = c(0, 25, 1),
+    "Africa" = c(20, 0, 3),
+    "Americas" = c(-80, 10, 3),
+    "Eastern Mediterranean" = c(45, 25, 4),
+    "Europe" = c(10, 50, 4),
+    "South East Asia" = c(100, 15, 4),
+    "Western Pacific" = c(130, 0, 3)
+  )
+})
+
+output$map <- leaflet::renderLeaflet({
+  coords <- llz()
+  map_data |>
+    leaflet::leaflet() |>
+    leaflet::setView(lng = coords[1], lat = coords[2], zoom = coords[3]) |>
+    # onRender("function(el, x) {el.style.backgroundColor = '#3498db';}") |>
+    leaflet::addPolygons(fillColor = ~pal(mcv2),
+                fillOpacity = 1,
+                color = "white",
+                weight = 1,
+                opacity = 1,
+                label = ~paste0(name, ": ",
+                                ifelse(is.na(mcv2),
+                                       "No Data",
+                                       scales::percent(mcv2))))
+})
+```
+
+
+::: {.card title="Measles and MCV2 By Income"}
 
 ```{r}
 #| label: time series plot
-#| title: Measels and Vaccination By Income
+#| title: measles and Vaccination By Income
 
 metadata |>
   select(region, country, year, measles_incidence_rate_per_1000000_total_population, total_population, mcv2, GDP_per_capita) |>
@@ -374,7 +399,7 @@ Vaccination rate are generally *higher* as the income classification group rises
 
 ```{r}
 #| label: table 1
-#| title: GDP Per Capita Summary Statistics
+#| title: GDP Per Capita Summary
 
 gdp_groups <- metadata |>
   filter(year == 2024, !is.na(region), !is.na(GDP_per_capita)) |>
@@ -445,7 +470,7 @@ summarize_stats(metadata |> filter(year == 2024), col = GDP_per_capita) |>
 
 ```{r}
 #| label: table 2
-#| title: GDP per Capita and MCV2 Vaccine Rate
+#| title: GDP per Capita and MCV2 Rate
 
 metadata |>
   #filter_out(is.na(region)) |>
@@ -541,7 +566,7 @@ metadata |>
 ### Column 2 - animated plot {.tabset width="55%"}
 
 ```{r}
-#| title: Percentage of Measles Cases and Under-5 Mortality Over Time in Mongolia
+#| title: Percentage of Measles Cases and Mortality Over Time
 
 metadata |> 
   right_join(
@@ -588,8 +613,8 @@ metadata |>
                ) |> 
                fct_recode(
                  #"Mortality (deaths below age 5)" = "mortality",
-                 "Mortality" = "mortality",
-                 "Measles" = "measles")
+                 "Under-5 Mortality Rate" = "mortality",
+                 "Measles Rate" = "measles")
              )
          ) + 
   geom_point() +
