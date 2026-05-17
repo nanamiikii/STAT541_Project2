@@ -316,20 +316,20 @@ pal <- colorNumeric(palette = c("#e74c3c", "#ecf0f1"),
 
 llz <- reactive({ # list of long, lat, zoom for setView()
   switch(input$region_select,
-    "World" = c(0, 25, 1),
-    "Africa" = c(20, 0, 3),
-    "Americas" = c(-80, 10, 3),
-    "Eastern Mediterranean" = c(45, 25, 4),
-    "Europe" = c(10, 50, 4),
-    "South East Asia" = c(100, 15, 4),
-    "Western Pacific" = c(130, 0, 3)
+    "World" = c(0, 0, 0),
+    "Africa" = c(20, 5, 2),
+    "Americas" = c(-100, 20, 1),
+    "Eastern Mediterranean" = c(45, 35, 2),
+    "Europe" = c(55, 60, 2),
+    "South East Asia" = c(95, 20, 3),
+    "Western Pacific" = c(130, 10, 1)
   )
 })
 
 output$map <- renderLeaflet({
   coords <- llz()
   map_data |>
-    leaflet() |>
+    leaflet(options = leafletOptions(zoomControl = FALSE)) |>
     setView(lng = coords[1], lat = coords[2], zoom = coords[3]) |>
     onRender("function(el, x) {el.style.backgroundColor = '#3498db';}") |>
     addPolygons(fillColor = ~pal(mcv2),
