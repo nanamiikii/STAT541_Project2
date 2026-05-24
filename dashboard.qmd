@@ -281,9 +281,10 @@ load(here::here("data", "metadata.RData"))
 
 ### Column 1 - plots {.tabset width="65%"}
 
-::: {.card title="2024 MCV2 Rates"}
+::: {.card title="World Map"}
 
 ```{r}
+#| eval: false
 #| label: leaflet plot
 #| title: 2024 Measles Vaccination Rates Around the World
 #| context: setup
@@ -300,12 +301,46 @@ selectInput("region_select",
 leafletOutput("map")
 ```
 
-An interactive world map displaying 2024 measles vaccination rates on a red color scale. Hovering over each country provides the country name and MCV2 vaccination rate. Many countries in *North America*, *Europe*, and parts of *Asia* appear lighter, suggesting higher vaccination coverage, while several countries in *central and sub-Saharan Africa* are darker, suggesting lower coverage.
+```{r}
+#| label: leaflet plot var
+#| title: 2024 Measles Vaccination Rates Around the World
+#| context: setup
+#| fig-alt: An interactive world map displaying 2024 measles vaccination rates, GDP per capita, and number of total measles cases for each 1 million individuals for different countries. Hovering over each country provides the country name and the selected variable. Darker colors suggest larger numbers.
+
+metadata_2024 <- metadata |>
+  filter(year == 2024) |> 
+  mutate(MCV2 = mcv2,
+         `GDP per capita` = GDP_per_capita,
+         Measles = measles_incidence_rate_per_1000000_total_population
+         ) |> 
+  mutate("MCV2_label" = scales::percent(MCV2),
+         "GDP per capita_label" = scales::dollar(`GDP per capita`),
+         "Measles_label" =  scales::comma(Measles)
+         ) |> 
+  mutate(across(.cols = c("GDP per capita", "Measles"),
+                .fns = ~scales::rescale(.x, to = c(0, 1))
+                )
+         ) #|> 
+  #mutate("Measles" = 1 - Measles)
+
+selectInput("var_select",
+            "Select a variable:",
+            choices = metadata_2024 |> select(
+              "MCV2", "GDP per capita", "Measles"
+            ) |> names(),
+            selected = "MCV2"
+            )
+
+leafletOutput("map")
+```
+
+An interactive world map displaying 2024 measles vaccination rates, GDP per capita, and number of total measles cases for each 1 million individuals for different countries. Hovering over each country provides the country name and the selected variable. Darker colors suggest larger numbers. Some countries are gray, representing unknown values.
 
 :::
 
 ```{r}
 #| context: server
+#| eval: false
 
 map_data <- ne_countries(scale = "medium", returnclass = "sf") |>
   left_join(metadata_2024, join_by(iso_a3_eh == iso3))
@@ -344,6 +379,65 @@ output$map <- renderLeaflet({
 })
 ```
 
+```{r}
+#| context: server
+
+map_data <- ne_countries(scale = "medium", returnclass = "sf") |>
+  left_join(metadata_2024, join_by(iso_a3_eh == iso3))
+
+v <- reactive({
+  switch(input$var_select,
+    "MCV2" = "#e74c3c",
+    "Measles" = "#f4a324",
+    "GDP per capita" = "#1CCDAA"
+    )
+})
+
+#metadata_2024 |> 
+#map_data |> 
+ # select(MCV2) |> 
+  #as.vector()
+
+#v <- metadata_2024 |> 
+#map_data |> 
+#  select(MCV2) |> 
+#  as.vector()
+
+#v[[1]]
+
+output$map <- renderLeaflet({
+  
+  v <- v()
+  pal <- colorNumeric(palette = c("#ecf0f1", v),
+                          domain = c(0, 1),
+                          na.color = "darkgray"
+                          )
+  
+  b <- metadata_2024 |> 
+    select(input$var_select) |> 
+    as.vector()
+  
+  map_data |>
+    leaflet() |>
+    setView(lng = 0, lat = 30, zoom = 1) |>
+    onRender("function(el, x) {el.style.backgroundColor = '#3498db';}") |>
+    addPolygons(fillColor = ~pal(
+      get(input$var_select)
+      ),
+                fillOpacity = 1,
+                color = "white",
+                weight = 1,
+                opacity = 1,
+                label = ~paste0(
+                  name, ": ",
+                  ifelse(is.na(get(input$var_select)),
+                    "No Data",
+                      get(str_c(input$var_select, "_label"))
+                                         )
+                                  )
+      )
+})
+```
 
 ::: {.card title="Measles and MCV2 By Income"}
 
@@ -389,13 +483,13 @@ metadata |>
   theme(
     plot.title = element_markdown(size = 14), 
     legend.position = "none",
-    axis.title.x = element_text(size = 15),
+    axis.title.x = element_text(size = 14),
     #axis.title.y = element_text(size = 17),
-    axis.text = element_text(size = 15),
-    legend.text = element_text(size = 15),
-    plot.subtitle = element_text(size = 15),
+    axis.text = element_text(size = 12),
+    legend.text = element_text(size = 14),
+    plot.subtitle = element_text(size = 14),
     #plot.title = element_text(size = 15),
-    strip.text = element_text(size = 15)
+    strip.text = element_text(size = 14)
     )
 
 ```
@@ -479,7 +573,7 @@ summarize_stats(metadata |> filter(year == 2024), col = GDP_per_capita) |>
 
 ```{r}
 #| label: table 2
-#| title: GDP per Capita and MCV2 Rate
+#| title: GDP and MCV2 Rate
 
 metadata |>
   #filter_out(is.na(region)) |>
@@ -490,7 +584,7 @@ metadata |>
   arrange(mean_GDP) |>
   gt() |>
   data_color(columns = mean_GDP, method = "numeric",
-             fn = col_numeric(palette = c("#ecf0f1", "#3498db"),
+             fn = col_numeric(palette = c("#ecf0f1", "#1CCDAA"),
                               domain = NULL)) |>
   data_color(columns = mean_mcv2, method = "numeric",
              fn = col_numeric(palette = c("#ecf0f1", "#e74c3c"),
@@ -504,6 +598,63 @@ metadata |>
   tab_caption(caption = md("Side-by-side comparison of mean GDP and MCV2 Percentage")) |>
   cols_label(region = "Region", mean_GDP = "Mean GDP (USD)", mean_mcv2 = "Mean MCV2 Coverage")
 ```
+
+```{r}
+#| label: table 3
+#| title: Model
+#| tbl-cap: "Estimated explanatory variable coefficients for a model using number of measles cases per million population as the dependent variable. Model utilizes an autocorrelation structure for the errors using year as the covariate."
+
+m <- gls(
+  measles_incidence_rate_per_1000000_total_population ~ region + log_GDP_per_capita + mcv2,
+  data = metadata |> mutate(log_GDP_per_capita = log(GDP_per_capita)),
+  na.action = na.omit,
+  correlation = corAR1(form = ~ year | region / country)
+  )
+
+summary(m)$tTable |> 
+  as_tibble(rownames = "var") |> 
+  mutate(region = c("Quantitative",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Region (Africa as baseline) (overall p-value = 0.057)",
+                    "Quantitative",
+                    "Quantitative"
+                    )
+         ) |> 
+  mutate(var = var |> 
+           str_remove("region") |> 
+           str_replace("log_GDP_per_capita", "log(GDP per capita ($))") |> 
+           str_replace("mcv2", "MCV2")
+         
+         ) |> 
+  group_by(region) |> 
+  gt() |> 
+  fmt_number(columns = c("Value", "Std.Error", "t-value"), 
+              decimals = 3
+             ) |> 
+  fmt_number(columns = c("p-value"), 
+              decimals = 3
+             ) |> 
+  cols_align(align = "left", columns = region) |>
+  cols_label("var" = "Variable",
+             "Value" = "Estimated coefficient"
+             ) |> 
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+    ) |> 
+  tab_style(
+    style = cell_text(style = "italic", decorate = "underline"),
+    locations = cells_row_groups()
+    ) |> 
+  tab_header(
+    title = md("Estimated coefficients for modeled variables "
+               )
+    )
+```
+
 
 # Mongolia
 
